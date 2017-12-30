@@ -1,0 +1,50 @@
+import tensorflow as tf
+from PIL import Image
+original_image_list = ["./1.jpg",
+                        "./2.jpg",
+                        "./3.jpg",
+                        "./4.jpg"]
+
+#makes a queue of file names
+filename_queue = tf.train.string_input_producer(original_image_list)
+
+#File reader. Reads an entire file
+image_reader = tf.WholeFileReader()
+
+#Session is multithreaded
+with tf.Session() as sess:
+    #Coordinate the reading of images files. Makes use of threads
+    coord = tf.train.Coordinator()
+    threads = tf.train.start_queue_runners(sess=sess, coord=coord)
+
+    image_list = []
+    for i in range(len(original_image_list)):
+        #reades the head of the queue (file name). returns a tuple: (file name, file object)
+        _, image_file = image_reader.read(filename_queue)
+
+        #returns a tensor which we can then use in training
+        image = tf.image.decode_jpeg(image_file)
+
+        image = tf.image.resize_images(image, [224, 224])
+        image.set_shape((224, 224, 3))
+
+        image_array = sess.run(image)
+        print (image_array.shape)
+
+        Image.fromarray(image_array.astype('uint8'), 'RGB').show()
+
+        #adding new dimension
+        image_list.append(tf.expand_dims(image_array, 0))
+    coord.request_stop()
+    coord.join(threads)
+
+    #Writing the summery
+    summary_writer = tf.summary.FileWriter('./summary', graph=sess.graph)
+
+    index = 0;
+
+    for image_tensor in image_list:
+        summary_str = sess.run(tf.summary.image("image-" + str(index), image_tensor))
+        summary_writer.add_summary(summary_str)
+        index += 1
+    summary_writer.close()
