@@ -123,12 +123,14 @@ input_tensor = K.concatenate([base_image,
 
 
 print("-------------------------------------")
+print(base_image.shape)
+print(style_reference_image.shape)
+print(combination_image.shape)
 print(input_tensor.shape)
 print("-------------------------------------")
-# build the VGG16 network with our 3 images as input
+
 # the model will be loaded with pre-trained ImageNet weights
-model = inception_v3.InceptionV3(weights='imagenet')
-print('Model loaded.')
+model = inception_v3.InceptionV3(include_top=False, weights='imagenet', input_tensor=input_tensor)
 
 # get the symbolic outputs of each "key" layer (we gave them unique names).
 outputs_dict = dict([(layer.name, layer.output) for layer in model.layers])
@@ -188,14 +190,14 @@ def total_variation_loss(x):
 
 # combine these loss functions into a single scalar
 loss = K.variable(0.)
-layer_features = outputs_dict['Mixed_5b']
+layer_features = outputs_dict['mixed10']
 base_image_features = layer_features[0, :, :, :]
 combination_features = layer_features[2, :, :, :]
 loss += content_weight * content_loss(base_image_features,
                                       combination_features)
 
-feature_layers = ['Mixed_5b', 'Mixed_5c',
-                  'Mixed_6a']
+feature_layers = ['mixed1', 'mixed2',
+                  'mixed3', 'mixed4', 'mixed5']
 for layer_name in feature_layers:
     layer_features = outputs_dict[layer_name]
     style_reference_features = layer_features[1, :, :, :]
